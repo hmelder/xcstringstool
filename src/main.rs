@@ -3,6 +3,7 @@
 
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
+use plist;
 use std::fs;
 
 mod xcstrings;
@@ -78,8 +79,15 @@ fn main() -> Result<()> {
             let parsed = xcstrings::deserialize(xcstrings_content.as_str())
                 .context("Failed to parse xcstrings file")?;
 
-            println!("Parsed: {:?}", parsed);
-            // Additional logic...
+            let strings = parsed.strings_for_localization("en");
+
+            let file = fs::File::create("Localizable.strings")?;
+            plist::to_writer_xml(file, &strings).context("Write strings file")?;
+
+            println!(
+                "Parsed: {:?} with source languge {}",
+                parsed, parsed.source_language
+            );
         }
         Commands::Sync => {
             println!("Syncing strings...");
