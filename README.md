@@ -1,5 +1,7 @@
 # xcstringstool
 
+[![CI](https://github.com/hmelder/xcstringstool/actions/workflows/main.yaml/badge.svg)](https://github.com/hmelder/xcstringstool/actions/workflows/main.yaml)
+
 This tool is a reimplementation of the string catalog compiler `xcstringstool` found in Xcode.
 
 ## Overview
