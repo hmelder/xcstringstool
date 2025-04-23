@@ -94,7 +94,7 @@ fn main() -> Result<()> {
                 .context("Failed to parse xcstrings file")?;
 
             // Retrieve mappings for all locales
-            let all_strings =  if language.is_none() {
+            let all_strings = if language.is_none() {
                 parsed.all_strings()
             } else {
                 let mut all_strings_map: HashMap<String, HashMap<String, String>> = HashMap::new();
@@ -104,7 +104,7 @@ fn main() -> Result<()> {
                 all_strings_map.insert(l, mapping);
 
                 all_strings_map
-            }
+            };
 
             // Do not write files when doing a dry run
             if !dry_run {
