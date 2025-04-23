@@ -12,6 +12,11 @@ way to manage localizations.
 In Objective-C projects, `xcstringstool` compiles the `.xcstrings` file into
 language-specific `.strings` and `.stringsdict` files.
 
+### TODO
+
+- Generation of `.stringsdict` files
+- Implementation of sync command
+
 ## Options
 
 ```
