@@ -9,3 +9,21 @@ way to manage localizations.
 
 In Objective-C projects, `xcstringstool` compiles the `.xcstrings` file into
 language-specific `.strings` and `.stringsdict` files.
+
+## Options
+
+```
+$ xcstringstool --help
+Work with .xcstrings files
+
+Usage: xcstringstool <COMMAND>
+
+Commands:
+  print    Prints all string keys represented in an xcstrings file
+  compile  Produces build products for an .xcstrings file
+  sync     Updates an .xcstrings file based on .stringsdata files
+  help     Print this message or the help of the given subcommand(s)
+
+Options:
+  -h, --help  Print help
+```
