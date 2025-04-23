@@ -67,7 +67,7 @@ impl Root {
             } else {
                 eprintln!(
                     "{}: cannot find localized string of {} for locale {}",
-                    "Warning".yellow().bold(),
+                    "warning".yellow().bold(),
                     key,
                     locale
                 );
