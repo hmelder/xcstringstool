@@ -1,3 +1,4 @@
+use colored::Colorize;
 use serde::Deserialize;
 use std::collections::HashMap;
 use thiserror::Error;
@@ -13,7 +14,7 @@ pub enum StringUnitState {
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct StringUnit {
-    pub state: StringUnitState,
+    // pub state: StringUnitState,
     pub value: String,
 }
 
@@ -36,9 +37,9 @@ pub enum ExtractionState {
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct StringEntry {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub comment: Option<String>,
-    pub extraction_state: ExtractionState,
+    // #[serde(skip_serializing_if = "Option::is_none")]
+    // pub comment: Option<String>,
+    // pub extraction_state: ExtractionState,
     pub localizations: HashMap<String, Localization>,
 }
 
@@ -49,6 +50,33 @@ pub struct Root {
     pub source_language: String,
     pub version: String,
     pub strings: HashMap<String, StringEntry>,
+}
+
+impl Root {
+    pub fn strings_for_localization(&self, locale: &str) -> HashMap<String, String> {
+        let mut map = HashMap::new();
+        let strings = &self.strings;
+
+        for (key, entry) in strings.into_iter() {
+            if let Some(localized) = entry.localizations.get(locale) {
+                if let Some(unit) = &localized.string_unit {
+                    // Insert localized string into map
+                    map.insert(key.to_string(), unit.value.to_string());
+                }
+                // ignore if not of string unit type
+            } else {
+                eprintln!(
+                    "{}: cannot find localized string of {} for locale {}",
+                    "Warning".yellow().bold(),
+                    key,
+                    locale
+                );
+                continue;
+            }
+        }
+
+        return map;
+    }
 }
 
 #[derive(Error, Debug)]
@@ -229,18 +257,18 @@ mod tests {
 
         // Check the "device" entry specifically
         let device_entry = parsed.strings.get("device").expect("Missing 'device' key");
-        assert_eq!(device_entry.comment, Some("this is a comment".to_string()));
-        assert_eq!(device_entry.extraction_state, ExtractionState::Manual);
+        // assert_eq!(device_entry.comment, Some("this is a comment".to_string()));
+        // assert_eq!(device_entry.extraction_state, ExtractionState::Manual);
         assert!(device_entry.localizations.contains_key("de"));
         assert!(device_entry.localizations.contains_key("en"));
 
         // Check the "greeting" entry (no comment)
-        let greeting_entry = parsed
-            .strings
-            .get("greeting")
-            .expect("Missing 'greeting' key");
-        assert_eq!(greeting_entry.comment, None);
-        assert_eq!(greeting_entry.extraction_state, ExtractionState::Manual);
+        // let greeting_entry = parsed
+        //     .strings
+        //     .get("greeting")
+        //     .expect("Missing 'greeting' key");
+        // assert_eq!(greeting_entry.comment, None);
+        // assert_eq!(greeting_entry.extraction_state, ExtractionState::Manual);
     }
 
     #[test]
@@ -259,7 +287,7 @@ mod tests {
         assert!(de_loc.string_unit.is_some());
 
         let unit = de_loc.string_unit.as_ref().unwrap();
-        assert_eq!(unit.state, StringUnitState::Translated);
+        // assert_eq!(unit.state, StringUnitState::Translated);
         assert_eq!(unit.value, "auf wiedersehen");
     }
 }
