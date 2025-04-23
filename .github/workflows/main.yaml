@@ -33,7 +33,6 @@ jobs:
       # This significantly speeds up subsequent builds
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
-        with:
 
       - name: Check Formatting (cargo fmt)
         run: cargo fmt --all --check
