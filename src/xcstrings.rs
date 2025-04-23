@@ -57,7 +57,7 @@ impl Root {
         let mut map = HashMap::new();
         let strings = &self.strings;
 
-        for (key, entry) in strings.into_iter() {
+        for (key, entry) in strings.iter() {
             if let Some(localized) = entry.localizations.get(locale) {
                 if let Some(unit) = &localized.string_unit {
                     // Insert localized string into map
@@ -75,7 +75,7 @@ impl Root {
             }
         }
 
-        return map;
+        map
     }
 }
 
@@ -240,7 +240,7 @@ mod tests {
         assert_eq!(root.version, "1.0");
         assert_eq!(root.source_language, "en");
 
-        assert!(root.strings.get("farewell").is_some());
+        assert!(root.strings.contains_key("farewell"));
     }
 
     #[test]
