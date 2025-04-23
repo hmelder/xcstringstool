@@ -27,3 +27,7 @@ Commands:
 Options:
   -h, --help  Print help
 ```
+
+## Building
+
+Install Rust (stable), and build the project with cargo: `cargo build --release`.
