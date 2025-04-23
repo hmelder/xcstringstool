@@ -1,0 +1,82 @@
+name: Rust CI for xcstringstool
+
+# Controls when the workflow will run
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  CARGO_TERM_COLOR: always # Force color output in cargo logs
+
+jobs:
+  # Job to build, test, and lint the code
+  build_and_test:
+    name: Build, Test & Lint (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          components: clippy, rustfmt
+
+      # 3. Cache Cargo registry, index, and build artifacts
+      # This significantly speeds up subsequent builds
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+
+      - name: Check Formatting (cargo fmt)
+        run: cargo fmt --all --check
+
+      # The -- -D warnings flag treats Clippy warnings as errors, failing the build
+      - name: Run Linter (cargo clippy)
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+      - name: Build Project (cargo build)
+        run: cargo build --verbose
+
+      - name: Run Tests (cargo test)
+        run: cargo test --verbose
+
+  release:
+    name: Create Release Binaries
+    if: startsWith(github.ref, 'refs/tags/v') # Only run on version tags (e.g., v1.2.3)
+    needs: build_and_test # Ensure build/test passes first
+    runs-on: ubuntu-latest # TODO(hugo): use a matrix for multi-platform releases
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build Release Binary
+        run: cargo build --release --verbose
+
+       - name: Package binary
+         run: |
+           cd target/release
+           tar czvf xcstringstool-${{ github.ref_name }}-${{ runner.os }}.tar.gz xcstringstool
+           cd ../..
+
+       - name: Create GitHub Release
+         uses: softprops/action-gh-release@v1
+         with:
+           files: target/release/*.tar.gz
+         env:
+           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
