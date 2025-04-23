@@ -3,7 +3,9 @@
 
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
+use colored::Colorize;
 use std::fs;
+use std::path::PathBuf;
 
 mod xcstrings;
 
@@ -18,7 +20,10 @@ struct Cli {
 #[derive(Subcommand)]
 enum Commands {
     /// Prints all string keys represented in an xcstrings file
-    Print,
+    Print {
+        /// The path to the .xcstrings file to print
+        input_file: String,
+    },
 
     /// Produces build products for an .xcstrings file
     Compile {
@@ -30,8 +35,8 @@ enum Commands {
         output_directory: String,
 
         /// Output format
-        #[arg(short = 'f', long, default_value = "stringsAndStringsdict")]
-        format: String,
+        #[arg(short = 'f', long, default_value = "stringsAndStringsdict", value_parser = clap::value_parser!(PathBuf))]
+        format: PathBuf,
 
         /// Language(s) to compile
         #[arg(short = 'l', long)]
@@ -54,8 +59,16 @@ fn main() -> Result<()> {
     let cli = Cli::parse();
 
     match cli.command {
-        Commands::Print => {
-            println!("Printing strings...");
+        Commands::Print { input_file } => {
+            let xcstrings_content =
+                fs::read_to_string(input_file).context("Failed to read xcstrings file")?;
+
+            let parsed = xcstrings::deserialize(xcstrings_content.as_str())
+                .context("Failed to parse xcstrings file")?;
+
+            for (key, _) in &parsed.strings {
+                println!("{}", key);
+            }
         }
         Commands::Compile {
             input_file,
@@ -67,7 +80,11 @@ fn main() -> Result<()> {
         } => {
             println!(
                 "Compiling {} into {} with format {}, serialization_format {}, and languages {:?} ...",
-                input_file, output_directory, format, serialization_format, language
+                input_file,
+                output_directory,
+                format.display(),
+                serialization_format,
+                language
             );
             if dry_run {
                 println!("Dry run: true");
@@ -89,7 +106,7 @@ fn main() -> Result<()> {
             );
         }
         Commands::Sync => {
-            println!("Syncing strings...");
+            println!("{}: Sync is not implemented", "error".red().bold());
         }
     }
 
