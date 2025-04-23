@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025 Hugo Melder
 
+use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
+use std::fs;
+
+mod xcstrings;
 
 #[derive(Parser)]
 #[command(name = "xcstringstool")]
@@ -46,7 +50,7 @@ enum Commands {
     Sync,
 }
 
-fn main() {
+fn main() -> Result<()> {
     let cli = Cli::parse();
 
     match cli.command {
@@ -68,10 +72,19 @@ fn main() {
             if dry_run {
                 println!("Dry run: true");
             }
+
+            let xcstrings_content =
+                fs::read_to_string(input_file).context("Failed to read xcstrings file")?;
+            let parsed = xcstrings::deserialize(xcstrings_content.as_str())
+                .context("Failed to parse xcstrings file")?;
+
+            println!("Parsed: {:?}", parsed);
             // Additional logic...
         }
         Commands::Sync => {
             println!("Syncing strings...");
         }
     }
+
+    Ok(())
 }
