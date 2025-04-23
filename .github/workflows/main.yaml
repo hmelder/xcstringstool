@@ -46,3 +46,117 @@ jobs:
 
       - name: Run Tests (cargo test)
         run: cargo test --verbose
+
+  # Job to create a GitHub Release entry when a tag is pushed
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: build_and_test # Ensure build/test passes before releasing
+    # Only run for tag pushes
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    outputs:
+      # Pass the upload URL to the next job
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+    steps:
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: Release ${{ github.ref_name }}
+          body: |
+            Automated release for ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+
+  # Job to build binaries for different targets and upload them as release assets
+  build_release_asset:
+    name: Build Release Asset (${{ matrix.target }})
+    needs: release # Wait for the release entry to be created
+    # Only run for tag pushes
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          # Windows x86_64
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            archive_ext: zip
+            binary_ext: .exe
+          # macOS x86_64 (Intel)
+          - os: macos-latest # Intel runner
+            target: x86_64-apple-darwin
+            archive_ext: tar.gz
+            binary_ext: ""
+          # macOS ARM64 (Apple Silicon)
+          - os: macos-latest # Use latest, might need adjustments if cross-compilation fails
+            target: aarch64-apple-darwin
+            archive_ext: tar.gz
+            binary_ext: ""
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain (stable) with target
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: ${{ matrix.target }}
+
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          # Cache per target
+          key: ${{ matrix.target }}
+
+      - name: Build release binary
+        run: cargo build --verbose --release --target ${{ matrix.target }}
+
+      # --- Prepare Archive ---
+      # Determine paths and names based on OS and target
+      - name: Set up paths (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          echo "ASSET_DIR=target/${{ matrix.target }}/release" >> $env:GITHUB_ENV
+          echo "ASSET_BASENAME=${{ env.BINARY_NAME }}-${{ github.ref_name }}-${{ matrix.target }}" >> $env:GITHUB_ENV
+          echo "ASSET_FILENAME=${{ env.BINARY_NAME }}${{ matrix.binary_ext }}" >> $env:GITHUB_ENV
+          echo "ARCHIVE_FILENAME=${{ env.BINARY_NAME }}-${{ github.ref_name }}-${{ matrix.target }}.${{ matrix.archive_ext }}" >> $env:GITHUB_ENV
+        shell: pwsh # Use PowerShell for Windows environment variables
+
+      - name: Set up paths (macOS/Linux)
+        if: matrix.os != 'windows-latest'
+        run: |
+          echo "ASSET_DIR=target/${{ matrix.target }}/release" >> $GITHUB_ENV
+          echo "ASSET_BASENAME=${{ env.BINARY_NAME }}-${{ github.ref_name }}-${{ matrix.target }}" >> $GITHUB_ENV
+          echo "ASSET_FILENAME=${{ env.BINARY_NAME }}${{ matrix.binary_ext }}" >> $GITHUB_ENV
+          echo "ARCHIVE_FILENAME=${{ env.BINARY_NAME }}-${{ github.ref_name }}-${{ matrix.target }}.${{ matrix.archive_ext }}" >> $GITHUB_ENV
+        shell: bash
+
+      # Package the binary
+      - name: Archive binary (Windows - Zip)
+        if: matrix.os == 'windows-latest'
+        # Using PowerShell Compress-Archive
+        run: Compress-Archive -Path "${{ env.ASSET_DIR }}/${{ env.ASSET_FILENAME }}" -DestinationPath "${{ env.ARCHIVE_FILENAME }}"
+        shell: pwsh
+
+      - name: Archive binary (macOS/Linux - Tar Gzip)
+        if: matrix.os != 'windows-latest'
+        # Use tar to create a gzipped archive
+        # The -C flag changes directory before adding files
+        run: tar -czf "${{ env.ARCHIVE_FILENAME }}" -C "${{ env.ASSET_DIR }}" "${{ env.ASSET_FILENAME }}"
+
+      # --- Upload Asset ---
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          # Get the upload URL from the 'release' job output
+          upload_url: ${{ needs.release.outputs.upload_url }}
+          asset_path: ./${{ env.ARCHIVE_FILENAME }} # Path to the file you want to upload
+          asset_name: ${{ env.ARCHIVE_FILENAME }} # Name of the asset in the release
+          asset_content_type: application/octet-stream # Generic content type
