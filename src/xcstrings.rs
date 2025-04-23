@@ -47,7 +47,7 @@ pub struct StringEntry {
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Root {
-    pub source_language: String,
+    // pub source_language: String,
     pub version: String,
     pub strings: HashMap<String, StringEntry>,
 }
@@ -76,6 +76,36 @@ impl Root {
         }
 
         map
+    }
+
+    // pub fn locales(&self) -> Vec<String> {
+    //     self.strings
+    //         .values()
+    //         .flat_map(|entry| entry.localizations.keys().cloned())
+    //         .collect::<HashSet<_>>() // deduplicate
+    //         .into_iter()
+    //         .collect()
+    // }
+
+    pub fn all_strings(&self) -> HashMap<String, HashMap<String, String>> {
+        let mut all_strings_map: HashMap<String, HashMap<String, String>> = HashMap::new();
+
+        for (key, entry) in &self.strings {
+            for (locale, unit) in &entry.localizations {
+                // Get or insert a new HashMap for the locale if it doesn't exist
+                let locale_map = all_strings_map
+                    .entry(locale.to_string()) // Get the entry for the locale, or insert a new one if not present
+                    .or_insert_with(HashMap::new); // Insert a new HashMap if it didn't exist
+
+                if let Some(unit) = &unit.string_unit {
+                    // Insert localized string into map
+                    locale_map.insert(key.to_string(), unit.value.to_string());
+                }
+                // ignore if not of string unit type
+            }
+        }
+
+        all_strings_map
     }
 }
 
