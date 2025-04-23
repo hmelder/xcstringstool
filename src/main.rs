@@ -67,7 +67,7 @@ fn main() -> Result<()> {
             let parsed = xcstrings::deserialize(xcstrings_content.as_str())
                 .context("Failed to parse xcstrings file")?;
 
-            for (key, _) in &parsed.strings {
+            for key in parsed.strings.keys() {
                 println!("{}", key);
             }
         }
@@ -94,10 +94,8 @@ fn main() -> Result<()> {
                 .context("Failed to parse xcstrings file")?;
 
             // Retrieve mappings for all locales
-            let all_strings;
-
-            if language.is_none() {
-                all_strings = parsed.all_strings();
+            let all_strings =  if language.is_none() {
+                parsed.all_strings()
             } else {
                 let mut all_strings_map: HashMap<String, HashMap<String, String>> = HashMap::new();
 
@@ -105,7 +103,7 @@ fn main() -> Result<()> {
                 let mapping = parsed.strings_for_localization(l.as_str());
                 all_strings_map.insert(l, mapping);
 
-                all_strings = all_strings_map;
+                all_strings_map
             }
 
             // Do not write files when doing a dry run
